@@ -30,10 +30,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "VS1053.h"
 
-#include <ArduinoLog.h>
-#include <VS1053.h>
-#include <string>
+static const char* TAG = "ESP_VS1053";
 
 VS1053::VS1053(uint8_t _cs_pin, uint8_t _dcs_pin, uint8_t _dreq_pin)
         : cs_pin(_cs_pin), dcs_pin(_dcs_pin), dreq_pin(_dreq_pin) {
@@ -119,7 +118,7 @@ bool VS1053::testComm(const char *header) {
     uint16_t delta = 300; // 3 for fast SPI
 
     if (!digitalRead(dreq_pin)) {
-        Log.error("VS1053 not properly installed!" CR);
+        ESP_LOGE(TAG, "VS1053 not properly installed!\n");
         // Allow testing without the VS1053 module
         pinMode(dreq_pin, INPUT_PULLUP); // DREQ is now input with pull-up
         return false;                    // Return bad result
@@ -132,8 +131,8 @@ bool VS1053::testComm(const char *header) {
         delta = 3; // Fast SPI, more loops
     }
 
-    std::string headerCr = std::string(header) + CR;
-    Log.notice(headerCr.c_str());  // Show a header
+    std::string headerCr = std::string(header) + "\n";
+    ESP_LOGI(TAG, headerCr.c_str());  // Show a header
 
     for (i = 0; (i < 0xFFFF) && (cnt < 20); i += delta) {
         write_register(SCI_VOL, i);         // Write data to SCI_VOL
@@ -141,7 +140,7 @@ bool VS1053::testComm(const char *header) {
         r2 = read_register(SCI_VOL);        // Read back a second time
         if (r1 != r2 || i != r1 || i != r2) // Check for 2 equal reads
         {
-            Log.error("VS1053 error retry SB:%04X R1:%04X R2:%04X" CR, i, r1, r2);
+            ESP_LOGE(TAG, "VS1053 error retry SB:%04X R1:%04X R2:%04X\n", i, r1, r2);
             cnt++;
             delay(10);
         }
@@ -158,11 +157,11 @@ bool VS1053::begin() {
     digitalWrite(dcs_pin, HIGH); // Start HIGH for SCI en SDI
     digitalWrite(cs_pin, HIGH);
     delay(100);
-    Log.notice("Reset VS1053..." CR);
+    ESP_LOGI(TAG, "Reset VS1053...\n");
     digitalWrite(dcs_pin, LOW); // Low & Low will bring reset pin low
     digitalWrite(cs_pin, LOW);
     delay(500);
-    Log.notice("End reset VS1053..." CR);
+    ESP_LOGI(TAG, "End reset VS1053...\n");
     digitalWrite(dcs_pin, HIGH); // Back to normal again
     digitalWrite(cs_pin, HIGH);
     delay(500);
@@ -186,7 +185,7 @@ bool VS1053::begin() {
     delay(10);
     await_data_request();
     endFillByte = wram_read(0x1E06) & 0xFF;
-    Log.notice("endFillByte is %X" CR, endFillByte);
+    ESP_LOGI(TAG, "endFillByte is %X\n", endFillByte);
     // printDetails ( "After last clocksetting" ) ;
     delay(100);
     return result;
@@ -205,8 +204,7 @@ void VS1053::setVolume(uint8_t vol) {
     }
 }
 
-void VS1053::setTone(uint8_t *rtone) // Set bass/treble (4 nibbles)
-{
+void VS1053::setTone(uint8_t *rtone) { // Set bass/treble (4 nibbles)
     // Set tone characteristics.  See documentation for the 4 nibbles.
     uint16_t value = 0; // Value to send to SCI_BASS
     int i;              // Loop control
@@ -217,8 +215,7 @@ void VS1053::setTone(uint8_t *rtone) // Set bass/treble (4 nibbles)
     write_register(SCI_BASS, value); // Volume left and right
 }
 
-uint8_t VS1053::getVolume() // Get the currenet volume setting.
-{
+uint8_t VS1053::getVolume() { // Get the currenet volume setting.
     return curvol;
 }
 
@@ -242,7 +239,7 @@ void VS1053::stopSong() {
         modereg = read_register(SCI_MODE); // Read status
         if ((modereg & _BV(SM_CANCEL)) == 0) {
             sdi_send_fillers(2052);
-            Log.notice("Song stopped correctly after %d msec" CR, i * 10);
+            ESP_LOGI(TAG, "Song stopped correctly after %d msec\n", i * 10);
             return;
         }
         delay(10);
@@ -260,17 +257,17 @@ void VS1053::printDetails(const char *header) {
     uint16_t regbuf[16];
     uint8_t i;
 
-    std::string headerCr = std::string(header) + CR;
-    Log.notice(headerCr.c_str());
+    std::string headerCr = std::string(header) + "\n";
+    ESP_LOGI(TAG, headerCr.c_str());
 
-    Log.notice("REG   Contents" CR);
-    Log.notice("---   -----" CR);
+    ESP_LOGI(TAG, "REG   Contents\n");
+    ESP_LOGI(TAG, "---   -----\n");
     for (i = 0; i <= SCI_num_registers; i++) {
         regbuf[i] = read_register(i);
     }
     for (i = 0; i <= SCI_num_registers; i++) {
         delay(5);
-        Log.notice("%3X - %5X" CR, i, regbuf[i]);
+        ESP_LOGI(TAG, "%3X - %5X\n", i, regbuf[i]);
     }
 }
 
@@ -282,8 +279,7 @@ void VS1053::printDetails(const char *header) {
  *
  * Read more here: http://www.bajdi.com/lcsoft-vs1053-mp3-module/#comment-33773
  */
-void VS1053::switchToMp3Mode(void)
-{
+void VS1053::switchToMp3Mode() {
     wram_write(0xC017, 3); // GPIO DDR = 3
     wram_write(0xC019, 0); // GPIO ODATA = 0
     delay(100);

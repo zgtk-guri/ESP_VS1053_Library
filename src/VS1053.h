@@ -34,8 +34,9 @@
 #ifndef VS1053_H
 #define VS1053_H
 
-#include <Arduino.h>
+#include <string>
 #include <SPI.h>
+#include "ConsoleLogger.h"
 
 class VS1053 {
 private:
