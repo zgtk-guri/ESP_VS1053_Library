@@ -6,7 +6,7 @@
  * version 1.0.1
  *
  * Licensed under GNU GPLv3 <http://gplv3.fsf.org/>
- * Copyright Â© 2017
+ * Copyright © 2017
  *
  * @authors baldram, edzelf, MagicCube, maniacbug
  *
@@ -63,6 +63,7 @@ private:
     const uint8_t SM_TESTS = 5;             // Bitnumber in SCI_MODE for tests
     const uint8_t SM_LINE1 = 14;            // Bitnumber in SCI_MODE for Line input
     SPISettings VS1053_SPI;                 // SPI settings for this slave
+    SPIClass& spi;
     uint8_t endFillByte;                    // Byte to send when stopping song
 protected:
     inline void await_data_request() const {
@@ -72,25 +73,25 @@ protected:
     }
 
     inline void control_mode_on() const {
-        SPI.beginTransaction(VS1053_SPI);   // Prevent other SPI users
+        spi.beginTransaction(VS1053_SPI);   // Prevent other SPI users
         digitalWrite(dcs_pin, HIGH);        // Bring slave in control mode
         digitalWrite(cs_pin, LOW);
     }
 
     inline void control_mode_off() const {
         digitalWrite(cs_pin, HIGH);         // End control mode
-        SPI.endTransaction();               // Allow other SPI users
+        spi.endTransaction();               // Allow other SPI users
     }
 
     inline void data_mode_on() const {
-        SPI.beginTransaction(VS1053_SPI);   // Prevent other SPI users
+        spi.beginTransaction(VS1053_SPI);   // Prevent other SPI users
         digitalWrite(cs_pin, HIGH);         // Bring slave in data mode
         digitalWrite(dcs_pin, LOW);
     }
 
     inline void data_mode_off() const {
         digitalWrite(dcs_pin, HIGH);        // End data mode
-        SPI.endTransaction();               // Allow other SPI users
+        spi.endTransaction();               // Allow other SPI users
     }
 
     uint16_t read_register(uint8_t _reg) const;
@@ -107,7 +108,7 @@ protected:
 
 public:
     // Constructor.  Only sets pin values.  Doesn't touch the chip.  Be sure to call begin()!
-    VS1053(uint8_t _cs_pin, uint8_t _dcs_pin, uint8_t _dreq_pin);
+    VS1053(SPIClass& spi, uint8_t _cs_pin, uint8_t _dcs_pin, uint8_t _dreq_pin);
 
     bool begin();                               // Begin operation.  Sets pins correctly,
                                                 // and prepares SPI bus.
